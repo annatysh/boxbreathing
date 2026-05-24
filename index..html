@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Box Breathing</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0e1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Georgia', serif;
+    color: #c8d8e8;
+    overflow: hidden;
+  }
+
+  .stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--d) ease-in-out infinite;
+    opacity: 0;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; }
+    50% { opacity: var(--o); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #8ab4d4;
+    font-weight: normal;
+    opacity: 0.85;
+  }
+
+  .box-wrapper {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  svg.box-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: visible;
+  }
+
+  /* Static box */
+  .box-bg {
+    fill: none;
+    stroke: rgba(100, 160, 210, 0.15);
+    stroke-width: 2;
+  }
+
+  /* Animated trace */
+  .box-trace {
+    fill: none;
+    stroke: #7ec8e3;
+    stroke-width: 3;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 8px #7ec8e3);
+    stroke-dasharray: 1040;
+    stroke-dashoffset: 1040;
+    transition: none;
+  }
+
+  /* Corner dots */
+  .corner-dot {
+    fill: rgba(126, 200, 227, 0.3);
+    r: 5;
+  }
+
+  /* Moving dot */
+  .mover {
+    fill: #ffffff;
+    filter: drop-shadow(0 0 10px #7ec8e3) drop-shadow(0 0 20px #4a9fc4);
+  }
+
+  .center-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .phase-label {
+    font-size: 1.5rem;
+    letter-spacing: 0.15em;
+    color: #e0f0ff;
+    text-transform: uppercase;
+    min-height: 2rem;
+    transition: opacity 0.4s;
+  }
+
+  .counter {
+    font-size: 3.5rem;
+    font-weight: 300;
+    color: #7ec8e3;
+    line-height: 1;
+    min-width: 2rem;
+    text-align: center;
+    filter: drop-shadow(0 0 12px rgba(126,200,227,0.5));
+  }
+
+  .phase-sub {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: #6a90aa;
+    text-transform: uppercase;
+    min-height: 1rem;
+  }
+
+  /* Step indicators */
+  .steps {
+    display: flex;
+    gap: 10px;
+  }
+
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(126, 200, 227, 0.2);
+    border: 1px solid rgba(126, 200, 227, 0.4);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .step-dot.active {
+    background: #7ec8e3;
+    box-shadow: 0 0 8px #7ec8e3;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  button {
+    background: rgba(126, 200, 227, 0.1);
+    border: 1px solid rgba(126, 200, 227, 0.35);
+    color: #7ec8e3;
+    padding: 12px 32px;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  button:hover {
+    background: rgba(126, 200, 227, 0.2);
+    box-shadow: 0 0 20px rgba(126, 200, 227, 0.2);
+  }
+
+  button.active-btn {
+    background: rgba(126, 200, 227, 0.25);
+    box-shadow: 0 0 20px rgba(126, 200, 227, 0.3);
+  }
+
+  .volume-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #5a8aaa;
+    letter-spacing: 0.1em;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 90px;
+    height: 3px;
+    background: rgba(126,200,227,0.25);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: #7ec8e3;
+    cursor: pointer;
+    box-shadow: 0 0 6px #7ec8e3;
+  }
+
+  .cycle-count {
+    font-size: 0.75rem;
+    color: #4a7a9a;
+    letter-spacing: 0.15em;
+  }
+
+  /* Phase color themes */
+  body.phase-inhale  .box-trace { stroke: #7ec8e3; filter: drop-shadow(0 0 8px #7ec8e3); }
+  body.phase-hold1   .box-trace { stroke: #b0d4f1; filter: drop-shadow(0 0 8px #b0d4f1); }
+  body.phase-exhale  .box-trace { stroke: #a0c8b0; filter: drop-shadow(0 0 8px #a0c8b0); }
+  body.phase-hold2   .box-trace { stroke: #c4b0d8; filter: drop-shadow(0 0 8px #c4b0d8); }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+  <h1>Box Breathing</h1>
+
+  <div class="box-wrapper">
+    <svg class="box-svg" viewBox="0 0 280 280">
+      <!-- Static background box -->
+      <rect class="box-bg" x="30" y="30" width="220" height="220" rx="8"/>
+      <!-- Corner dots -->
+      <circle class="corner-dot" cx="30" cy="30"/>
+      <circle class="corner-dot" cx="250" cy="30"/>
+      <circle class="corner-dot" cx="250" cy="250"/>
+      <circle class="corner-dot" cx="30" cy="250"/>
+      <!-- Animated trace path: top→right→bottom→left (clockwise) -->
+      <path class="box-trace" id="trace"
+        d="M30,30 L250,30 L250,250 L30,250 Z"/>
+      <!-- Moving dot -->
+      <circle class="mover" id="mover" cx="30" cy="30" r="7"/>
+    </svg>
+
+    <div class="center-content">
+      <div class="phase-label" id="phaseLabel">Ready</div>
+      <div class="counter" id="counter">5</div>
+      <div class="phase-sub" id="phaseSub">5 · 5 · 5 · 5</div>
+    </div>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="step-dot" id="s0"></div>
+    <div class="step-dot" id="s1"></div>
+    <div class="step-dot" id="s2"></div>
+    <div class="step-dot" id="s3"></div>
+  </div>
+
+  <div class="controls">
+    <button id="startBtn" onclick="toggleSession()">Start</button>
+    <div class="volume-wrap">
+      🔊
+      <input type="range" id="vol" min="0" max="1" step="0.05" value="0.7" oninput="setVolume(this.value)">
+    </div>
+  </div>
+
+  <div class="cycle-count" id="cycleCount">Cycles: 0</div>
+</div>
+
+<script>
+// ─── Stars ───────────────────────────────────────────────────────────────────
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 120; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 2 + 0.5;
+  s.style.cssText = `
+    width:${size}px; height:${size}px;
+    top:${Math.random()*100}%; left:${Math.random()*100}%;
+    --d:${(Math.random()*4+2).toFixed(1)}s;
+    --o:${(Math.random()*0.6+0.1).toFixed(2)};
+    animation-delay:${(Math.random()*6).toFixed(1)}s;
+  `;
+  starsEl.appendChild(s);
+}
+
+// ─── Audio Engine ─────────────────────────────────────────────────────────────
+let ctx, masterGain, musicGain, breathGain;
+let running = false;
+let cycles = 0;
+let phaseIndex = 0;
+let ticker = null;
+let secondsLeft = 5;
+let bilateralInterval = null;
+
+const PHASES = [
+  { name: 'Inhale',  sub: 'breathe in',  side: 'top',    phaseClass: 'phase-inhale' },
+  { name: 'Hold',    sub: 'hold',         side: 'right',  phaseClass: 'phase-hold1'  },
+  { name: 'Exhale',  sub: 'breathe out',  side: 'bottom', phaseClass: 'phase-exhale' },
+  { name: 'Hold',    sub: 'hold',         side: 'left',   phaseClass: 'phase-hold2'  },
+];
+
+function initAudio() {
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = ctx.createGain();
+  masterGain.gain.value = 0.7;
+  masterGain.connect(ctx.destination);
+
+  musicGain = ctx.createGain();
+  musicGain.gain.value = 0.55;
+  musicGain.connect(masterGain);
+
+  breathGain = ctx.createGain();
+  breathGain.gain.value = 0.0;
+  breathGain.connect(masterGain);
+
+  startAmbientMusic();
+}
+
+function setVolume(v) {
+  if (masterGain) masterGain.gain.value = parseFloat(v);
+}
+
+// ── Ambient pad with bilateral panning ────────────────────────────────────────
+function startAmbientMusic() {
+  const notes = [130.81, 164.81, 196.00, 261.63, 329.63]; // C3 E3 G3 C4 E4
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    const pan = ctx.createStereoPanner();
+
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+
+    // Slow vibrato
+    const lfo = ctx.createOscillator();
+    const lfoG = ctx.createGain();
+    lfo.frequency.value = 0.08 + i * 0.015;
+    lfoG.gain.value = 0.6;
+    lfo.connect(lfoG);
+    lfoG.connect(osc.frequency);
+    lfo.start();
+
+    g.gain.value = 0.06 - i * 0.005;
+    pan.pan.value = (i % 2 === 0 ? -0.3 : 0.3);
+
+    osc.connect(g);
+    g.connect(pan);
+    pan.connect(musicGain);
+    osc.start();
+  });
+
+  // Slow bilateral sweep tone (theta range ~6 Hz binaural-style panning)
+  startBilateralSweep();
+
+  // Soft low drone
+  const drone = ctx.createOscillator();
+  const droneG = ctx.createGain();
+  drone.type = 'sine';
+  drone.frequency.value = 65.4; // C2
+  droneG.gain.value = 0.04;
+  drone.connect(droneG);
+  droneG.connect(musicGain);
+  drone.start();
+}
+
+function startBilateralSweep() {
+  // Bilateral panning: a soft tone that pans left↔right slowly (~0.25 Hz)
+  const sweepOsc = ctx.createOscillator();
+  const sweepG   = ctx.createGain();
+  const sweepPan = ctx.createStereoPanner();
+
+  sweepOsc.type = 'sine';
+  sweepOsc.frequency.value = 174; // Solfeggio-inspired calming freq
+
+  sweepG.gain.value = 0.045;
+
+  // LFO to drive the pan left↔right
+  const panLFO  = ctx.createOscillator();
+  const panLFOG = ctx.createGain();
+  panLFO.type = 'sine';
+  panLFO.frequency.value = 0.25; // one full sweep every 4 seconds
+  panLFOG.gain.value = 0.95;     // nearly full L↔R swing
+
+  panLFO.connect(panLFOG);
+  panLFOG.connect(sweepPan.pan);
+
+  sweepOsc.connect(sweepG);
+  sweepG.connect(sweepPan);
+  sweepPan.connect(musicGain);
+
+  sweepOsc.start();
+  panLFO.start();
+}
+
+// ── Breath sounds ─────────────────────────────────────────────────────────────
+function playBreathIn(duration) {
+  if (!ctx) return;
+  const bufSize = ctx.sampleRate * duration;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.35;
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+
+  // Shape: soft ramp up then plateau
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, ctx.currentTime);
+  env.gain.linearRampToValueAtTime(0.18, ctx.currentTime + duration * 0.4);
+  env.gain.linearRampToValueAtTime(0.10, ctx.currentTime + duration * 0.85);
+  env.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+  // Filter to shape into breath-like sound
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 900;
+  filter.Q.value = 0.7;
+  filter.frequency.linearRampToValueAtTime(1400, ctx.currentTime + duration * 0.5);
+
+  src.connect(filter);
+  filter.connect(env);
+  env.connect(breathGain);
+  breathGain.gain.setValueAtTime(1, ctx.currentTime);
+  src.start();
+  src.stop(ctx.currentTime + duration);
+}
+
+function playBreathOut(duration) {
+  if (!ctx) return;
+  const bufSize = ctx.sampleRate * duration;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.3;
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, ctx.currentTime);
+  env.gain.linearRampToValueAtTime(0.14, ctx.currentTime + duration * 0.15);
+  env.gain.linearRampToValueAtTime(0.06, ctx.currentTime + duration * 0.75);
+  env.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 1200;
+  filter.Q.value = 0.6;
+  filter.frequency.linearRampToValueAtTime(700, ctx.currentTime + duration * 0.6);
+
+  src.connect(filter);
+  filter.connect(env);
+  env.connect(breathGain);
+  breathGain.gain.setValueAtTime(1, ctx.currentTime);
+  src.start();
+  src.stop(ctx.currentTime + duration);
+}
+
+// ─── Animation ────────────────────────────────────────────────────────────────
+// Box path: top(0→220) right(0→220) bottom(220→0) left(220→0)
+// Total perimeter = 880px in viewBox coords
+// SVG path: M30,30 L250,30 L250,250 L30,250 Z  → perimeter=880
+
+const PERIMETER = 880;
+const trace = document.getElementById('trace');
+const mover = document.getElementById('mover');
+
+// Segment start offsets along the path (dashoffset logic: offset = PERIMETER - progress)
+// Clockwise: top=0..220, right=220..440, bottom=440..660, left=660..880
+const SEGMENT_START = [0, 220, 440, 660];
+
+function getPointOnBox(phase, t) {
+  // t: 0..1 within the phase
+  const seg = phase * 220;
+  const pos = seg + t * 220;
+  // Map pos to x,y
+  if (pos <= 220)      return { x: 30 + pos,       y: 30 };
+  if (pos <= 440)      return { x: 250,             y: 30 + (pos - 220) };
+  if (pos <= 660)      return { x: 250 - (pos-440), y: 250 };
+  return                      { x: 30,              y: 250 - (pos-660) };
+}
+
+function updateTrace(phase, t) {
+  const drawn = SEGMENT_START[phase] + t * 220;
+  trace.style.strokeDashoffset = PERIMETER - drawn;
+  const pt = getPointOnBox(phase, t);
+  mover.setAttribute('cx', pt.x);
+  mover.setAttribute('cy', pt.y);
+}
+
+// ─── Session Logic ────────────────────────────────────────────────────────────
+function toggleSession() {
+  if (!running) startSession();
+  else stopSession();
+}
+
+function startSession() {
+  initAudio();
+  if (ctx.state === 'suspended') ctx.resume();
+  running = true;
+  cycles = 0;
+  phaseIndex = 0;
+  document.getElementById('startBtn').textContent = 'Stop';
+  document.getElementById('startBtn').classList.add('active-btn');
+  beginPhase();
+}
+
+function stopSession() {
+  running = false;
+  clearInterval(ticker);
+  document.getElementById('startBtn').textContent = 'Start';
+  document.getElementById('startBtn').classList.remove('active-btn');
+  document.getElementById('phaseLabel').textContent = 'Ready';
+  document.getElementById('phaseSub').textContent = '5 · 5 · 5 · 5';
+  document.getElementById('counter').textContent = '5';
+  document.body.className = '';
+  // Reset trace
+  trace.style.strokeDashoffset = PERIMETER;
+  const start = getPointOnBox(0, 0);
+  mover.setAttribute('cx', start.x);
+  mover.setAttribute('cy', start.y);
+  [0,1,2,3].forEach(i => document.getElementById('s'+i).classList.remove('active'));
+}
+
+function beginPhase() {
+  if (!running) return;
+  const phase = PHASES[phaseIndex];
+  secondsLeft = 5;
+
+  document.getElementById('phaseLabel').textContent = phase.name;
+  document.getElementById('phaseSub').textContent = phase.sub;
+  document.getElementById('counter').textContent = secondsLeft;
+  document.body.className = phase.phaseClass;
+
+  [0,1,2,3].forEach(i => document.getElementById('s'+i).classList.remove('active'));
+  document.getElementById('s'+phaseIndex).classList.add('active');
+
+  // Breath sounds
+  if (phaseIndex === 0) playBreathIn(5);
+  if (phaseIndex === 2) playBreathOut(5);
+
+  let elapsed = 0;
+  const totalMs = 5000;
+  const startTime = performance.now();
+
+  clearInterval(ticker);
+  ticker = setInterval(() => {
+    if (!running) { clearInterval(ticker); return; }
+
+    const now = performance.now();
+    const delta = now - startTime;
+    const t = Math.min(delta / totalMs, 1);
+    updateTrace(phaseIndex, t);
+
+    const newSec = Math.ceil((totalMs - delta) / 1000);
+    if (newSec !== secondsLeft && newSec >= 0) {
+      secondsLeft = newSec;
+      document.getElementById('counter').textContent = secondsLeft || '';
+    }
+
+    if (delta >= totalMs) {
+      clearInterval(ticker);
+      updateTrace(phaseIndex, 1);
+
+      phaseIndex = (phaseIndex + 1) % 4;
+      if (phaseIndex === 0) {
+        cycles++;
+        document.getElementById('cycleCount').textContent = `Cycles: ${cycles}`;
+        // Reset trace for new cycle
+        trace.style.strokeDashoffset = PERIMETER;
+      }
+      beginPhase();
+    }
+  }, 40);
+}
+</script>
+</body>
+</html>
